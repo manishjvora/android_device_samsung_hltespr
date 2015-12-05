@@ -17,7 +17,7 @@
 PRODUCT_PROPERTY_OVERRIDES := \
     ro.ota.romname=temasek-hltespr \
     ro.ota.version=$(shell date +%F | sed s@-@@g) \
-    ro.ota.manifest=http://temasek.rajasthanautoworks.in/ota/hltespr.xml
+    ro.ota.manifest=http://temasek.rajasthanautoworks.in/ota/cm13/hltespr.xml
 
 # Store correct IMSI when retreived from SIMRecords and use it for RuimRecords
 PRODUCT_PROPERTY_OVERRIDES += \
