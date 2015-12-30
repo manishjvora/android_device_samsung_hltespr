@@ -28,6 +28,7 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "vendor_init.h"
 #include "property_service.h"
@@ -36,15 +37,13 @@
 
 #include "init_msm.h"
 
-void cdma_properties(char const *default_cdma_sub,
-        char const *operator_numeric, char const *operator_alpha)
+void cdma_properties(const char cdma_sub[], const char op_numeric[], const char op_alpha[])
 {
     property_set("ril.subscription.types", "NV,RUIM");
-    property_set("ro.cdma.home.operator.numeric", operator_numeric);
-    property_set("ro.cdma.home.operator.alpha", operator_alpha);
-    property_set("ro.telephony.default_cdma_sub", default_cdma_sub);
+    property_set("ro.cdma.home.operator.numeric", op_numeric);
+    property_set("ro.cdma.home.operator.alpha", op_alpha);
+    property_set("ro.telephony.default_cdma_sub", cdma_sub);
     property_set("ro.telephony.default_network", "10");
-    property_set("ro.telephony.ril.config", "newDriverCallU,newDialCode");
     property_set("telephony.lteOnCdmaDevice", "1");
 }
 
