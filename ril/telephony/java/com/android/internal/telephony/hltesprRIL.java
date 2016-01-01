@@ -26,6 +26,7 @@ import android.os.Parcel;
 import android.os.SystemProperties;
 import android.telephony.Rlog;
 import android.telephony.SignalStrength;
+import android.telephony.SmsMessage;
 import android.telephony.PhoneNumberUtils;
 
 import java.io.IOException;
@@ -46,8 +47,12 @@ import com.android.internal.telephony.uicc.IccCardStatus;
 public class hltesprRIL extends RIL implements CommandsInterface {
 
     private AudioManager mAudioManager;
+    private Object mSMSLock = new Object();
+    private boolean mIsSendingSMS = false;
     private boolean isGSM = false;
     private Message mPendingGetSimStatus;
+
+    public static final long SEND_SMS_TIMEOUT_IN_MS = 30000;
 
     public hltesprRIL(Context context, int preferredNetworkType,
             int cdmaSubscription, Integer instanceId) {
@@ -227,6 +232,42 @@ public class hltesprRIL extends RIL implements CommandsInterface {
         return cardStatus;
     }
 
+    @Override
+    public void
+    sendCdmaSms(byte[] pdu, Message result) {
+        smsLock();
+        super.sendCdmaSms(pdu, result);
+    }
+
+    @Override
+    public void
+        sendSMS (String smscPDU, String pdu, Message result) {
+        smsLock();
+        super.sendSMS(smscPDU, pdu, result);
+    }
+
+    private void smsLock(){
+        // Do not send a new SMS until the response for the previous SMS has been received
+        //   * for the error case where the response never comes back, time out after
+        //     30 seconds and just try the next SEND_SMS
+        synchronized (mSMSLock) {
+            long timeoutTime  = SystemClock.elapsedRealtime() + SEND_SMS_TIMEOUT_IN_MS;
+            long waitTimeLeft = SEND_SMS_TIMEOUT_IN_MS;
+            while (mIsSendingSMS && (waitTimeLeft > 0)) {
+                Rlog.d(RILJ_LOG_TAG, "sendSMS() waiting for response of previous SEND_SMS");
+                try {
+                    mSMSLock.wait(waitTimeLeft);
+                } catch (InterruptedException ex) {
+                    // ignore the interrupt and rewait for the remainder
+                }
+                waitTimeLeft = timeoutTime - SystemClock.elapsedRealtime();
+            }
+            if (waitTimeLeft <= 0) {
+                Rlog.e(RILJ_LOG_TAG, "sendSms() timed out waiting for response of previous CDMA_SEND_SMS");
+            }
+            mIsSendingSMS = true;
+        }
+    }
 
     @Override
     protected Object responseSignalStrength(Parcel p) {
@@ -459,6 +500,18 @@ public class hltesprRIL extends RIL implements CommandsInterface {
             Rlog.d(RILJ_LOG_TAG, "setWbAmr(): setting audio parameter - wb_amr=off");
             mAudioManager.setParameters("wide_voice_enable=false");
         }
+    }
+
+    @Override
+    protected Object
+    responseSMS(Parcel p) {
+        // Notify that sendSMS() can send the next SMS
+        synchronized (mSMSLock) {
+            mIsSendingSMS = false;
+            mSMSLock.notify();
+        }
+
+        return super.responseSMS(p);
     }
 
     @Override
