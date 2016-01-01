@@ -47,7 +47,6 @@ public class hltesprRIL extends RIL implements CommandsInterface {
 
     private AudioManager mAudioManager;
     private boolean isGSM = false;
-    private boolean newril = needsOldRilFeature("newril"); //4.4.4 verson of Samsung RIL
     private Message mPendingGetSimStatus;
 
     public hltesprRIL(Context context, int preferredNetworkType,
